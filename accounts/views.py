@@ -6,6 +6,9 @@ from .models import Account
 from django.contrib import messages, auth
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
+from cart.views import _cart_id
+from cart.models import Cart, CartItem
+import requests
 
 #verification
 from django.contrib.sites.shortcuts import get_current_site
@@ -31,7 +34,7 @@ def register(request):
             user = Account.objects.create_user(first_name=first_name, last_name=last_name, email=email, username=username, address=address, password=password)
             user.save()
 
-            #USER ACTIVATION
+            #USER EMAIL ACTIVATION
             current_site = get_current_site(request)
             mail_subject = "Please activate your account"
             message = render_to_string('accounts/account_verification_email.html', {
@@ -58,9 +61,60 @@ def login(request):
         user = auth.authenticate(email=email, password=password)
         
         if user is not None:
+            try:
+                 cart = Cart.objects.get(cart_id=_cart_id(request))
+                 cart_item_exists = CartItem.objects.filter(cart=cart).exists()
+                 if cart_item_exists:
+                    cart_item = CartItem.objects.filter(cart=cart)
+                    #getting the product variation by cart id
+                    product_variation = []
+                    for item in cart_item:
+                        variation = item.variations.all()
+                        product_variation.append(list(variation))
+                        
+                    # get the cart items from the user to access his product variations
+                    cart_item = CartItem.objects.filter(user=user)
+                    existing_variation_list = []
+                    id = []
+                    for item in cart_item:
+                        existing_variation = item.variations.all()
+                        existing_variation_list.append(list(existing_variation))
+                        id.append(item.id)
+                        
+                    for pr in product_variation:
+                        if pr in existing_variation_list:
+                            index = existing_variation_list(pr)
+                            item_id = id[index]
+                            item = CartItem.objects.get(product=product, id=item_id)
+                            item.quantity += 1
+                            item.user = user
+                            item.save()
+                        else:
+                            cart_item = CartItem.objects.filter(cart=cart)
+                            for item in cart_item:
+                                item.user = user
+                                item.save()
+                               
+                        
+                        
+                        
+                    #  for item in cart_item:
+                    #      item.user = user
+                    #      item.save()
+            except:
+                pass
             auth.login(request, user)
             messages.success(request, 'Login success.')
-            return redirect('home')
+            url = request.META.get('HTTP_REFERER')
+            try:
+                query = requests.utils.urlparse(url).query
+                params = dict(x.split('=') for x in query.split('&'))
+                if 'next' in params:
+                    nextPage = params['next']
+                    return redirect(nextPage)
+               
+            except:
+                return redirect('home')
         if user is None:
             messages.error(request, 'Invalid login credentials.')
             return redirect('login')
@@ -142,7 +196,7 @@ def resetPassword_validate(request, uidb64, token):
 
     return render(request, 'accounts/resetpassword_validate.html')
 
-def resetPassword(reqeust, uidb64, token):
+def resetPassword(request, uidb64, token):
     if request.method == 'POST':
         password = request.POST['password']
         confirm_password = request.POST['password_confirm']
