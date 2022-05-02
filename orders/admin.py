@@ -11,9 +11,17 @@ class PaymentAdmin(admin.ModelAdmin):
     list_filter = ()
     fieldsets = ()
     
-
+class OrderProductInline(admin.TabularInline):
+    model = OrderProduct
+    
+class OrderAdmin(admin.ModelAdmin):
+    list_display = ('order_number', 'user', 'full_name', 'email', 'order_total', 'is_ordered')
+    list_filter = ['status', 'is_ordered']
+    search_fields = ['order_number', 'full_name', 'email', 'address']
+    inlines = [OrderProductInline]
+    
 
 
 admin.site.register(Payment, PaymentAdmin)
-admin.site.register(Order)
+admin.site.register(Order, OrderAdmin)
 admin.site.register(OrderProduct)
