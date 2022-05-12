@@ -13,6 +13,8 @@ class PaymentAdmin(admin.ModelAdmin):
     
 class OrderProductInline(admin.TabularInline):
     model = OrderProduct
+    readonly_fields = ('payment', 'user', 'product', 'quantity', 'product_price', 'ordered')
+    extra = 0
     
 class OrderAdmin(admin.ModelAdmin):
     list_display = ('order_number', 'user', 'full_name', 'email', 'order_total', 'is_ordered')

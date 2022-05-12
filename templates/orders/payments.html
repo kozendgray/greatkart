@@ -145,12 +145,12 @@
     
     // Render the PayPal button into #paypal-button-container
 
-    var amount = "{{grand_total}}" 
+    var amount = "{{ grand_total | floatformat:2 }}" 
     var url = "{% url 'payments' %}"
     var csrftoken = getCookie('csrftoken');
     var orderID = "{{ order.order_number }}"
     var payment_method = 'PayPal'
-    
+    var redirect_url = "{% url 'order_complete' %}"
 
     paypal.Buttons({
 
@@ -173,34 +173,25 @@
                 sendData();
                 function sendData(){
                     fetch(url, {
-                      method: "POST",
+                      method : "POST",
                       headers: {
                           "Content-type": "application/json",
-                          "X-CSRFTOKEN": csrftoken,
+                          "X-CSRFToken": csrftoken,
                       },
                       body: JSON.stringify({
                           orderID: orderID,
-                          transactionID: orderData.id,
+                          transID: orderData.id,
                           payment_method: payment_method,
                           status: orderData.status,
-
                       }), 
                     })
                     .then(response => response.json())
-                    .then(data => console.log(data))
+                    .then((data) => {
+                        window.location.href = redirect_url + '?order_number='+data.order_number+'&payment_id='+data.transID;
+                    });
                 }
-                console.log('Capture result', orderData, JSON.stringify(orderData, null, 2));
-                const transaction = orderData.purchase_units[0].payments.captures[0];
-                alert(`Transaction ${transaction.status}: ${transaction.id}\n\nSee console for all available details`);
-                // Replace the above to show a success message within this page, e.g.
-                // const element = document.getElementById('paypal-button-container');
-                // element.innerHTML = '';
-                // element.innerHTML = '<h3>Thank you for your payment!</h3>';
-                // Or go to another URL:  actions.redirect('thank_you.html');
-
             });
         }
-
 
     }).render('#paypal-button-container');
 </script> 
