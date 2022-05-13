@@ -9,24 +9,23 @@ import json
 from store.models import Product
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
-from django.contrib import messages
-import json
-from django.core.mail import EmailMessage
-from django.template.loader import render_to_string
+
+
 
 def payments(request):
     body = json.loads(request.body)
     order = Order.objects.get(user=request.user, is_ordered=False, order_number = body['orderID'])
     payment = Payment( 
         user = request.user,
-        payment_id = body['transactionID'],
+        payment_id = body['transID'],
         payment_method = body['payment_method'],
         amount_paid = order.order_total,
         status = body['status'],
         )
     payment.save()
+    
     order.payment = payment
-    is_ordered = True
+    order.is_ordered = True
     order.save()
         
     # Move the cart items to Order Product Table
@@ -45,28 +44,23 @@ def payments(request):
         
         cart_item = CartItem.objects.get(id=item.id)
         product_variation = cart_item.variations.all()
-        orderproduct = OrderProduct.objects.get(id=OrderProduct.id)
+        orderproduct = OrderProduct.objects.get(id=orderproduct.id)
         orderproduct.variations.set(product_variation)
         orderproduct.save()
         
-        
-        
-    # Reduce the quantity of the sold products
-        product = Product.objects.get(id=item.product.id)
+        # Reduce the quantity of the sold products
+        product = Product.objects.get(id=item.product_id)
         product.stock -= item.quantity
         product.save()
-    
     
     # Clear Cart
     CartItem.objects.filter(user=request.user).delete()
     
     # Send order recieved to customer
-    current_site = get_current_site(request)
     mail_subject = "Thank you for your order"
     message = render_to_string('orders/order_recieved_email.html', {
         'user': request.user,
         'order': order,
-        
     })
     to_email = request.user.email
     send_email = EmailMessage(mail_subject, message, to=[to_email])
@@ -76,7 +70,6 @@ def payments(request):
     data = {
         'order_number': order.order_number,
         'transID': payment.payment_id,
-        
     }
     return JsonResponse(data)
 
@@ -146,4 +139,31 @@ def place_order(request, total = 0, quantity = 0,):
             
             
 def order_complete(request):
+    order_number = request.GET.get('order_number')
+    transID = request.GET.get('payment_id')
+    
+    try:
+        order = Order.objects.get(order_number=order_number, is_ordered=True)
+        ordered_products = OrderProduct.objects.filter(order_id=order.id)
+        
+        subtotal = 0
+        for i in ordered_products:
+            subtotal += i.product_price * i.quantity
+        payment = Payment.objects.get(payment_id=transID)
+        
+        
+        context = {
+            'order': order,
+            'ordered_products': ordered_products,
+            'order_number': order.order_number,
+            'transID': payment.payment_id,
+            'payment':payment,
+            'subtotal':subtotal,
+        }
+        return render(request, 'orders/order_complete.html', context)
+    except (Payment.DoesNotExist, Order.DoesNotExist):
+        print('payment or order does not exist')
+        return redirect('home')
+    
     return render(request, 'orders/order_complete.html')
+    
