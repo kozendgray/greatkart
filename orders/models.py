@@ -2,6 +2,7 @@ from telnetlib import STATUS
 from django.db import models
 from accounts.models import Account
 from store.models import Variation, Product
+from accounts.models import Account
 
 # Create your models here.
 
