@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 
 
+
 class AccountManager(BaseUserManager):
 	
 	def create_user(self, first_name, last_name, username, email, address, password=None):
@@ -67,3 +68,18 @@ class Account(AbstractBaseUser):
 	def has_module_perms(self, app_label):
 		return True 
 
+class UserProfile(models.Model):
+    user = models.OneToOneField(Account, on_delete=models.CASCADE)
+    address_1 = models.CharField(blank=True, max_length=100)
+    address_2 = models.CharField(blank=True, max_length=100)
+    profile_picture = models.ImageField(null=True, blank=True, upload_to='userprofile/')
+    city = models.CharField(blank=True, max_length=50)
+    state = models.CharField(blank=True, max_length=50)
+    country = models.CharField(blank=True, max_length=50)
+    
+    def __str__(self):
+        return self.user.first_name
+    
+    def full_address(self):
+        return f"{self.address_1} {self.address_2}"
+    

@@ -23,6 +23,13 @@ def add_cart(request, product_id):
      # if the user is authenticated
     if current_user.is_authenticated:
         product_variation = []
+        try:
+            cart = Cart.objects.get(cart_id=_cart_id(request))
+        except Cart.DoesNotExist:
+            cart = Cart.objects.create(
+                cart_id=_cart_id(request)
+            )
+        cart.save()
         if request.method == "POST":
             for item in request.POST:
                 key = item
@@ -34,14 +41,6 @@ def add_cart(request, product_id):
                     pass
                     
         
-        try:
-            cart = Cart.objects.get(cart_id=_cart_id(request))
-        except Cart.DoesNotExist:
-            cart = Cart.objects.create(
-                cart_id=_cart_id(request)
-            )
-        cart.save()
- 
         cart_item_exists = CartItem.objects.filter(product=product, user=current_user).exists()
         if cart_item_exists:
             cart_item = CartItem.objects.filter(product=product, user=current_user)
