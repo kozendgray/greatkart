@@ -1,4 +1,3 @@
-from tkinter import CASCADE
 from django.db import models
 from category.models import Category
 from django.shortcuts import reverse
